@@ -14,13 +14,16 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @RequiredArgsConstructor
-public class SampleTestJobConfiguration {
+public class SampleTestJobConfig {
     private final PlatformTransactionManager platformTransactionManager;
     private final JobRepository jobRepository;
 
+    private int testInt1 = 0;
+    private int testInt2 = 0;
+
     @Bean
     public Job sampleMinTestJob(Step firstStep, Step secondStep) {
-        return new JobBuilder("simpleTestJob", jobRepository)
+        return new JobBuilder("simpleTestJob3", jobRepository)
                 .start(firstStep)
                 .next(secondStep)
                 .build();
@@ -31,9 +34,16 @@ public class SampleTestJobConfiguration {
     public Step firstStep() {
         return new StepBuilder("simpleTestFirstJob", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    System.out.println("simpleTestFirstJob!!");
-                    return RepeatStatus.FINISHED;
+                    if (testInt1 == 5) {
+                        System.out.println("simpleTestFirstJob FINISHED!! : " + testInt1);
+                        return RepeatStatus.FINISHED;
+                    }
+
+                    System.out.println("simpleTestFirstJob!! : " + testInt1);
+                    testInt1++;
+                    return RepeatStatus.CONTINUABLE;
                 }, platformTransactionManager)
+//                .allowStartIfComplete(true)
                 .build();
     }
 
@@ -42,9 +52,15 @@ public class SampleTestJobConfiguration {
     public Step secondStep() {
         return new StepBuilder("simpleTestSecondJob", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    System.out.println("simpleTestSecondJob!!");
-                    return RepeatStatus.FINISHED;
-                }, platformTransactionManager)
+                    if (testInt2 == 5) {
+                        System.out.println("simpleTestSecondJob FINISHED!! : " + testInt2);
+                        return RepeatStatus.FINISHED;
+                    }
+
+                    System.out.println("simpleTestSecondJob!! : " + testInt2);
+                    testInt2++;
+                    return RepeatStatus.CONTINUABLE;
+                }, platformTransactionManager).allowStartIfComplete(false)
                 .build();
     }
 
