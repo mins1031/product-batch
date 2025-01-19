@@ -20,10 +20,12 @@ public class ProductEntity {
     private Long id;
     private String name;
     private boolean isCanView;
+    private double totalStartPoint;
 
     @Builder
-    public ProductEntity(String name, boolean isCanView) {
+    public ProductEntity(String name, boolean isCanView, double totalStartPoint) {
         this.name = name;
         this.isCanView = isCanView;
+        this.totalStartPoint = totalStartPoint;
     }
 }

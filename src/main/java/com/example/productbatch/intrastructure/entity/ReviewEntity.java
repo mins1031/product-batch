@@ -23,12 +23,15 @@ public class ReviewEntity {
     private long orderId;
     private long productId;
     private double startPoint;
+    private boolean isCalculatedStarPoint;
+
 
     @Builder
-    public ReviewEntity(long reviewerId, long orderId, long productId, double startPoint) {
+    public ReviewEntity(long reviewerId, long orderId, long productId, double startPoint, boolean isCalculatedStarPoint) {
         this.reviewerId = reviewerId;
         this.orderId = orderId;
         this.productId = productId;
         this.startPoint = startPoint;
+        this.isCalculatedStarPoint = isCalculatedStarPoint;
     }
 }
