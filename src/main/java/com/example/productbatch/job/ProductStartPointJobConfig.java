@@ -1,6 +1,9 @@
 package com.example.productbatch.job;
 
+import com.example.productbatch.domain.Review;
 import com.example.productbatch.intrastructure.dto.StarPointCalculateDto;
+import com.example.productbatch.intrastructure.entity.ProductEntity;
+import com.example.productbatch.intrastructure.entity.ReviewEntity;
 import com.example.productbatch.intrastructure.repository.dsl.StarPointDslRepository;
 import com.example.productbatch.intrastructure.repository.jpa.ProductJpaRepository;
 import jakarta.persistence.EntityManagerFactory;
@@ -18,13 +21,17 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder;
 import org.springframework.batch.item.database.orm.JpaQueryProvider;
+import org.springframework.batch.item.support.CompositeItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.stream.Collectors.groupingBy;
@@ -58,25 +65,74 @@ public class ProductStartPointJobConfig {
                 .build();
     }
 
-    private ItemReader<StarPointCalculateDto> itemReader() {
-        Map<String, Object> params = Map.of(
-                "isCanView", true,
-                "isCalculatedStarPoint", true
+    private ItemReader<StarPointCalculateDto> itemReader() throws Exception {
+        List<ProductEntity> productEntities = readProductEntities();
+        List<Long> productIds = productEntities.stream()
+                .map(ProductEntity::getId)
+                .toList();
+
+        Map<String, Object> reviewParams = Map.of(
+                "isCalculatedStarPoint", false,
+                "productIds", productIds
         );
 
-        return new JpaPagingItemReaderBuilder<StarPointCalculateDto>()
-                .name("StarPointCalculateDtoReader")
+        JpaPagingItemReader<ReviewEntity> reviewResult = new JpaPagingItemReaderBuilder<ReviewEntity>()
+                .name("reviewReader")
                 .entityManagerFactory(entityManagerFactory)
                 .queryString(
-                        "SELECT p.id, r.id, p.name, r.starPoint " +
-                        "FROM ProductEntity p join ReviewEntity r on p.id = r.productId " +
-                        "WHERE p.isCanView = :isCanView amd r.isCalculatedStarPoint = :isCalculatedStarPoint " +
-                        "ORDER BY p.id DESC"
+                        "SELECT r.id, r.statPoint" +
+                                "FROM ReviewEntity r" +
+                                "WHERE r.isCalculatedStarPoint = :isCalculatedStarPoint" +
+                                    "and r.productId IN :productIds" +
+                                "ORDER BY p.id DESC"
                 )
-                .parameterValues(params)
+                .parameterValues(reviewParams)
                 .pageSize(CHUNK_SIZE)
-                .build()
-                ;
+                .build();
+
+        Map<Long, List<ReviewEntity>> productReviewsMap = new HashMap<>();
+        while (true) {
+            ReviewEntity read = reviewResult.read();
+            if (Objects.isNull(read)) {
+                break;
+            }
+
+            long productId = read.getProductId();
+            List<ReviewEntity> reviewList = productReviewsMap.getOrDefault(productId, new ArrayList<>());
+            reviewList.add(read);
+
+            productReviewsMap.put(productId, reviewList);
+        }
+
+        CompositeItemReader<StarPointCalculateDto> compositeItemReader = new CompositeItemReader<>(List);
+
+        return StarPointCalculateDto.of(productReviewsMap);
+    }
+
+    private List<ProductEntity> readProductEntities() throws Exception {
+        JpaPagingItemReader<ProductEntity> productResult = new JpaPagingItemReaderBuilder<ProductEntity>()
+                .name("productReader")
+                .entityManagerFactory(entityManagerFactory)
+                .queryString(
+                        "SELECT p.id, p.totalStartPoint, p.name " +
+                                "FROM ProductEntity p" +
+                                "WHERE p.isCanView = :isCanView" +
+                                "ORDER BY p.id DESC"
+                )
+                .parameterValues(
+                        Map.of(
+                                "isCanView", true
+                        )
+                )
+                .pageSize(CHUNK_SIZE)
+                .build();
+
+        List<ProductEntity> productEntities = new ArrayList<>();
+        while (productResult.read() != null) {
+            productEntities.add(productResult.read());
+        }
+
+        return productEntities;
     }
 
 //    private ItemProcessor<? super StarPointCalculateDto, StarPointCalculateDto> itemProcessor() {
@@ -90,17 +146,9 @@ public class ProductStartPointJobConfig {
             Map<Long, ? extends List<? extends StarPointCalculateDto>> collect =
                     dtos.stream().collect(groupingBy(StarPointCalculateDto::productId));
 
-//            collect.entrySet().stream()
-//                    .map(entry ->
-//                            {
-//                                Long productId = entry.getKey();
-//                                double totalStarPoint = entry.getValue().stream()
-//                                        .mapToDouble(StarPointCalculateDto::starPoint)
-//                                        .sum();
-////                                totalStarPoint /
-//                            }
-//                    ).c();
-//            starPointDslRepository.updateStartPointByProduct()
+            // 
+
+            starPointDslRepository.updateStartPointByProduct()
 
         };
     }
