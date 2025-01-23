@@ -1,19 +1,14 @@
 package com.example.productbatch.intrastructure.dto;
 
-import com.querydsl.core.annotations.QueryProjection;
+import com.example.productbatch.intrastructure.entity.ReviewEntity;
+
+import java.util.List;
+import java.util.Map;
 
 public record StarPointCalculateDto(
-        long productId,
-        long reviewId,
-        String productName,
-        double starPoint
+        Map<Long, List<ReviewEntity>> productReviewMap
 ) {
-
-    @QueryProjection
-    public StarPointCalculateDto(long productId, long reviewId, String productName, double starPoint) {
-        this.productId = productId;
-        this.reviewId = reviewId;
-        this.productName = productName;
-        this.starPoint = starPoint;
+    public static StarPointCalculateDto of(Map<Long, List<ReviewEntity>> productReviewMap) {
+        return new StarPointCalculateDto(productReviewMap);
     }
 }

@@ -31,25 +31,25 @@ public class StarPointDslRepository {
                 .where(productEntity.id.eq(productId));
     }
 
-    @Transactional
-    public List<StarPointCalculateDto> findProductAndReviewInCalculateTarget(Pageable pageable) {
-        return jpaQueryFactory
-                .select(
-                        new QStarPointCalculateDto(
-                                productEntity.id,
-                                reviewEntity.id,
-                                productEntity.name,
-                                reviewEntity.startPoint
-                        )
-                )
-                .from(productEntity, reviewEntity)
-                .where(
-                        productEntity.isCanView.isTrue()
-                                .and(reviewEntity.isCalculatedStarPoint).isTrue()
-                )
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch()
-                ;
-    }
+//    @Transactional
+//    public List<StarPointCalculateDto> findProductAndReviewInCalculateTarget(Pageable pageable) {
+//        return jpaQueryFactory
+//                .select(
+//                        new QStarPointCalculateDto(
+//                                productEntity.id,
+//                                reviewEntity.id,
+//                                productEntity.name,
+//                                reviewEntity.startPoint
+//                        )
+//                )
+//                .from(productEntity, reviewEntity)
+//                .where(
+//                        productEntity.isCanView.isTrue()
+//                                .and(reviewEntity.isCalculatedStarPoint).isTrue()
+//                )
+//                .offset(pageable.getOffset())
+//                .limit(pageable.getPageSize())
+//                .fetch()
+//                ;
+//    }
 }
